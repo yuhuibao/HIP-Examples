@@ -95,6 +95,10 @@ int main() {
 
   int i;
   int errors;
+  hipEvent_t start,stop;
+  float time;
+  hipEventCreate(&start);
+  hipEventCreate(&stop);
 
   hostA = (float*)malloc(NUM * sizeof(float));
   hostB = (float*)malloc(NUM * sizeof(float));
@@ -113,20 +117,23 @@ int main() {
   HIP_ASSERT(hipMemcpy(deviceB, hostB, NUM*sizeof(float), hipMemcpyHostToDevice));
   HIP_ASSERT(hipMemcpy(deviceC, hostC, NUM*sizeof(float), hipMemcpyHostToDevice));
 
-
+  hipEventRecord(start,0);
   hipLaunchKernelGGL(vectoradd_float, 
                   dim3(WIDTH/THREADS_PER_BLOCK_X, HEIGHT/THREADS_PER_BLOCK_Y),
                   dim3(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y),
                   0, 0,
                   deviceA ,deviceB ,deviceC ,WIDTH ,HEIGHT);
-
+  hipEventRecord(stop,0);
+  hipEventSynchronize(stop);
+  hipEventElapsedTime(&time, start, stop);
+  printf("kernel time is %g ms\n",time);
 
   HIP_ASSERT(hipMemcpy(hostA, deviceA, NUM*sizeof(float), hipMemcpyDeviceToHost));
 
   // verify the results
   errors = 0;
   for (i = 0; i < NUM; i++) {
-    if (hostA[i] != (hostB[i] + hostC[i])) {
+    if (hostA[i] !=1.0 ) {
       errors++;
     }
   }
